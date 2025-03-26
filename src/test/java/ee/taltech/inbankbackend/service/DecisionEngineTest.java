@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ee.taltech.inbankbackend.exceptions.InvalidAgeException; // Added for TICKET-102 (age validation)
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,7 +31,7 @@ class DecisionEngineTest {
         debtorPersonalCode = "37605030299";
         segment1PersonalCode = "50307172740";
         segment2PersonalCode = "38411266610";
-        segment3PersonalCode = "35006069515";
+        segment3PersonalCode = "35006069515"; // This personal code now fails due to exceeding age limit (TICKET-102)
     }
 
     @Test
@@ -56,11 +57,10 @@ class DecisionEngineTest {
     }
 
     @Test
-    void testSegment3PersonalCode() throws InvalidLoanPeriodException, NoValidLoanException,
-            InvalidPersonalCodeException, InvalidLoanAmountException {
-        Decision decision = decisionEngine.calculateApprovedLoan(segment3PersonalCode, 4000L, 12);
-        assertEquals(10000, decision.getLoanAmount());
-        assertEquals(12, decision.getLoanPeriod());
+    void testSegment3PersonalCode_AgeTooHigh() {
+        // New test case added for TICKET-102: verifies rejection if applicant exceeds max allowed age
+        assertThrows(InvalidAgeException.class,
+                () -> decisionEngine.calculateApprovedLoan(segment3PersonalCode, 4000L, 12));
     }
 
     @Test
@@ -105,8 +105,7 @@ class DecisionEngineTest {
     @Test
     void testNoValidLoanFound() {
         assertThrows(NoValidLoanException.class,
-                () -> decisionEngine.calculateApprovedLoan(debtorPersonalCode, 10000L, 60));
+                () -> decisionEngine.calculateApprovedLoan(debtorPersonalCode, 10000L, 48));
     }
 
 }
-
